@@ -1,0 +1,88 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+// Environment
+int trueSignal() {
+    return (rand() % 2 == 0) ? 10 : -10;
+}
+
+// Perception
+int perceive(int signal, float bias) {
+    int noise = (rand() % 5) - 2; // [-2 .. +2]
+    return (int)(signal + bias + noise);
+}
+
+// Learning rule
+void updateBias(float *bias, int outcome) {
+    float lr = 0.05;
+
+    if(outcome > 0)
+        *bias += lr * 5;
+    else
+        *bias -= lr * 5;
+
+    // clamp
+    if(*bias > 20) *bias = 20;
+    if(*bias < -20) *bias = -20;
+}
+
+// Observer correction (meta layer)
+void observerCorrection(float *bias) {
+    float correctionRate = 0.02;
+
+    if(*bias > 8)
+        *bias -= correctionRate * (*bias); // soften optimism
+    else if(*bias < -8)
+        *bias += correctionRate * (-(*bias)); // soften pessimism
+}
+
+// Run agent
+int runAgent(float initialBias, int steps, int observerOn) {
+    int energy = 50;
+    float bias = initialBias;
+
+    for(int i = 0; i < steps; i++) {
+        int signal = trueSignal();
+        int perceived = perceive(signal, bias);
+
+        int outcome = 0;
+
+        if(perceived > 0) {
+            energy += signal;
+            outcome = signal;
+        } else {
+            energy -= 2;
+            outcome = -2;
+        }
+
+        // learning
+        updateBias(&bias, outcome);
+
+        // observer layer
+        if(observerOn)
+            observerCorrection(&bias);
+    }
+
+    return energy;
+}
+
+float averageRun(float initialBias, int trials, int observerOn) {
+    int total = 0;
+    for(int i = 0; i < trials; i++) {
+        total += runAgent(initialBias, 600, observerOn);
+    }
+    return (float) total / trials;
+}
+
+int main() {
+    srand(time(NULL));
+
+    float normalAgent = averageRun(0.0, 50, 0); // no observer
+    float observerAgent = averageRun(0.0, 50, 1); // observer active
+
+    printf("Normal Agent Avg Energy: %.2f\n", normalAgent);
+    printf("Observer Agent Avg Energy: %.2f\n", observerAgent);
+
+    return 0;
+}
