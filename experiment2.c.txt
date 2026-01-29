@@ -1,0 +1,53 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+// Environment signal
+int trueSignal() {
+    int r = rand() % 10;
+    if(r < 5) return 10; // 50% reward
+    else return -10; // 50% loss
+}
+
+// Perspective distorts perception
+int perceive(int signal, int bias) {
+    int noise = (rand() % 5) - 2; // small random noise [-2 .. +2]
+    return signal + bias + noise;
+}
+
+int runAgent(int bias, int steps) {
+    int energy = 50;
+
+    for(int i = 0; i < steps; i++) {
+        int signal = trueSignal();
+        int perceived = perceive(signal, bias);
+
+        // Decision based on perceived reality
+        if(perceived > 0) {
+            energy += signal; // real consequence
+        } else {
+            energy -= 2; // avoidance cost
+        }
+    }
+    return energy;
+}
+
+float averageRun(int bias, int trials) {
+    int total = 0;
+    for(int i = 0; i < trials; i++) {
+        total += runAgent(bias, 300);
+    }
+    return (float) total / trials;
+}
+
+int main() {
+    srand(time(NULL));
+
+    float optimistic = averageRun(5, 100); // positive lens
+    float pessimistic = averageRun(-5, 100); // negative lens
+
+    printf("Optimistic Agent Avg Energy: %.2f\n", optimistic);
+    printf("Pessimistic Agent Avg Energy: %.2f\n", pessimistic);
+
+    return 0;
+}
