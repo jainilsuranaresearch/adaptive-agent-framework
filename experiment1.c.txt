@@ -1,0 +1,45 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+int randomSignal() {
+    return (rand() % 2 == 0) ? 10 : -10;
+}
+
+int runAgent(int bias, int steps) {
+    int energy = 50;
+
+    for(int i = 0; i < steps; i++) {
+        int signal = randomSignal();
+        int decision = signal + bias;
+
+        if(decision > 0) {
+            // Approach → both gain or loss applies
+            energy += signal;
+        } else {
+            // Avoid → small energy decay (missed opportunity cost)
+            energy -= 2;
+        }
+    }
+    return energy;
+}
+
+float averageRun(int bias, int trials) {
+    int total = 0;
+    for(int i = 0; i < trials; i++) {
+        total += runAgent(bias, 200);
+    }
+    return (float) total / trials;
+}
+
+int main() {
+    srand(time(NULL));
+
+    float safeAvg = averageRun(6, 100);
+    float riskyAvg = averageRun(-6, 100);
+
+    printf("Safe Agent Average Energy: %.2f\n", safeAvg);
+    printf("Risky Agent Average Energy: %.2f\n", riskyAvg);
+
+    return 0;
+}
