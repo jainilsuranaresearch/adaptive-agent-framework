@@ -1,0 +1,73 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+// Environment: balanced world
+int trueSignal() {
+    return (rand() % 2 == 0) ? 10 : -10;
+}
+
+// Perception distortion
+int perceive(int signal, float bias) {
+    int noise = (rand() % 5) - 2; // [-2 .. +2]
+    return (int)(signal + bias + noise);
+}
+
+// Learning rule: outcome updates bias
+void updateBias(float *bias, int outcome) {
+    float learningRate = 0.05;
+
+    if(outcome > 0)
+        *bias += learningRate * 5; // success increases optimism
+    else
+        *bias -= learningRate * 5; // failure increases pessimism
+
+    // clamp bias
+    if(*bias > 15) *bias = 15;
+    if(*bias < -15) *bias = -15;
+}
+
+int runAgent(float initialBias, int steps) {
+    int energy = 50;
+    float bias = initialBias;
+
+    for(int i = 0; i < steps; i++) {
+        int signal = trueSignal();
+        int perceived = perceive(signal, bias);
+
+        int outcome = 0;
+
+        if(perceived > 0) {
+            energy += signal;
+            outcome = signal;
+        } else {
+            energy -= 2;
+            outcome = -2;
+        }
+
+        // learning
+        updateBias(&bias, outcome);
+    }
+
+    return energy;
+}
+
+float averageRun(float initialBias, int trials) {
+    int total = 0;
+    for(int i = 0; i < trials; i++) {
+        total += runAgent(initialBias, 500);
+    }
+    return (float) total / trials;
+}
+
+int main() {
+    srand(time(NULL));
+
+    float agentA = averageRun(0.0, 50); // neutral start
+    float agentB = averageRun(0.0, 50); // identical start
+
+    printf("Agent A Avg Energy: %.2f\n", agentA);
+    printf("Agent B Avg Energy: %.2f\n", agentB);
+
+    return 0;
+}
