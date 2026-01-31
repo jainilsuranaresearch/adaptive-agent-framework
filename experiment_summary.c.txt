@@ -1,0 +1,137 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <math.h>
+
+// Environment signal
+int trueSignal() {
+    return (rand() % 2 == 0) ? 10 : -10;
+}
+
+// Perception with bias
+int perceive(int signal, float bias) {
+    int noise = (rand() % 5) - 2; // [-2..+2]
+    return (int)(signal + bias + noise);
+}
+
+// Learning rule
+void updateBias(float *bias, int outcome) {
+    float lr = 0.05;
+
+    if(outcome > 0)
+        *bias += lr * 5;
+    else
+        *bias -= lr * 5;
+
+    if(*bias > 20) *bias = 20;
+    if(*bias < -20) *bias = -20;
+}
+
+// Observer stabilization
+void observerCorrection(float *bias) {
+    float rate = 0.02;
+
+    if(*bias > 8)
+        *bias -= rate * (*bias);
+    else if(*bias < -8)
+        *bias += rate * (-(*bias));
+}
+
+// One episode of interaction
+void interactionStep(
+    float *biasA, float *biasB,
+    int *energyA, int *energyB,
+    int observerOn)
+{
+    int signal = trueSignal();
+
+    int pA = perceive(signal, *biasA);
+    int pB = perceive(signal, *biasB);
+
+    int actionA = (pA > 0);
+    int actionB = (pB > 0);
+
+    int outcomeA = 0, outcomeB = 0;
+
+    if(actionA && actionB) {
+        int shared = signal / 2;
+        *energyA += shared;
+        *energyB += shared;
+        outcomeA = outcomeB = shared;
+    }
+    else if(actionA && !actionB) {
+        *energyA += signal;
+        *energyB -= 1;
+        outcomeA = signal;
+        outcomeB = -1;
+    }
+    else if(!actionA && actionB) {
+        *energyB += signal;
+        *energyA -= 1;
+        outcomeB = signal;
+        outcomeA = -1;
+    }
+    else {
+        *energyA -= 2;
+        *energyB -= 2;
+        outcomeA = outcomeB = -2;
+    }
+
+    updateBias(biasA, outcomeA);
+    updateBias(biasB, outcomeB);
+
+    if(observerOn) {
+        observerCorrection(biasA);
+        observerCorrection(biasB);
+    }
+}
+
+// Run simulation
+int runSimulation(int steps, int observerOn) {
+    float biasA = 0.0, biasB = 0.0;
+    int energyA = 50, energyB = 50;
+
+    for(int i = 0; i < steps; i++) {
+        interactionStep(&biasA, &biasB,
+                        &energyA, &energyB,
+                        observerOn);
+    }
+    return energyA + energyB; // total system energy
+}
+
+// Statistics runner
+void runStats(int trials, int observerOn) {
+    double sum = 0, sumSq = 0;
+    int min = 100000, max = -100000;
+
+    for(int i = 0; i < trials; i++) {
+        int result = runSimulation(800, observerOn);
+
+        sum += result;
+        sumSq += result * result;
+
+        if(result < min) min = result;
+        if(result > max) max = result;
+    }
+
+    double mean = sum / trials;
+    double variance = (sumSq / trials) - (mean * mean);
+    double stddev = sqrt(variance);
+
+    printf("Mean Energy: %.2f\n", mean);
+    printf("Std Dev: %.2f\n", stddev);
+    printf("Min: %d\n", min);
+    printf("Max: %d\n\n", max);
+}
+
+int main() {
+    srand(time(NULL));
+
+    printf("NO OBSERVER (40 runs)\n");
+    runStats(40, 0);
+
+    printf("WITH META-FEEDBACK OBSERVER (40 runs)\n");
+    runStats(40, 1);
+
+    return 0;
+}
