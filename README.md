@@ -43,6 +43,10 @@ in adaptive systems.
 - experiment5.c  
   Emotion, memory decay, and robustness behavior.
 
+- experiment_summary.c  
+  Computes mean, standard deviation, and extrema of total system energy across 40 independent stochastic runs. Used to generate Table 1 in the manuscript.
+
+
 ---
 
 ## Reproducibility
